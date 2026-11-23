@@ -16,6 +16,17 @@ import numpy as np
 
 MODEL_DIR = Path(__file__).resolve().parent.parent / "model"
 
+MODEL_URLS = {
+    "helmet_violation.pt": (
+        "https://huggingface.co/iam-tsr/yolov8n-helmet-detection/"
+        "resolve/main/best.pt?download=true"
+    ),
+    "plate_detector.pt": (
+        "https://huggingface.co/Koushim/yolov8-license-plate-detection/"
+        "resolve/main/best.pt?download=true"
+    ),
+}
+
 
 class AuxDetectors:
     def __init__(self):
@@ -27,12 +38,17 @@ class AuxDetectors:
 
     def load(self):
         from ultralytics import YOLO
+        import urllib.request
         helmet_path = MODEL_DIR / "helmet_violation.pt"
         plate_path = MODEL_DIR / "plate_detector.pt"
-        if not (helmet_path.exists() and plate_path.exists()):
-            self.error = "helmet_violation.pt / plate_detector.pt not found in model folder"
-            print(f"[aux] {self.error}")
-            return
+        # Download on first run (weights are gitignored).
+        for path in (helmet_path, plate_path):
+            if not path.exists():
+                print(f"[aux] downloading {path.name} ...")
+                MODEL_DIR.mkdir(parents=True, exist_ok=True)
+                tmp = path.with_suffix(".download")
+                urllib.request.urlretrieve(MODEL_URLS[path.name], tmp)
+                tmp.rename(path)
         print("[aux] loading helmet + plate models ...")
         self.helmet_model = YOLO(str(helmet_path))
         self.plate_model = YOLO(str(plate_path))
